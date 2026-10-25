@@ -3414,9 +3414,13 @@ push_pattern(const char *path, VALUE ary, void *enc)
     rb_ary_push(ary, name);
 }
 
+/* Upper bound on the number of expansion steps for one pattern, so that
+ * patterns with many brace groups cannot expand exponentially. */
+#define BRACE_EXPAND_LIMIT 65536
+
 static int
-ruby_brace_expand(const char *str, int flags, ruby_glob_func *func, VALUE arg,
-                  rb_encoding *enc, VALUE var)
+brace_expand_limited(const char *str, int flags, ruby_glob_func *func, VALUE arg,
+                     rb_encoding *enc, VALUE var, size_t *budget)
 {
     const int escape = !(flags & FNM_NOESCAPE);
     const char *p = str;
@@ -3424,6 +3428,9 @@ ruby_brace_expand(const char *str, int flags, ruby_glob_func *func, VALUE arg,
     const char *s = p;
     const char *lbrace = 0, *rbrace = 0;
     int nest = 0, status = 0;
+
+    if (*budget == 0) return -1;
+    --*budget;
 
     while (*p) {
         if (*p == '{' && nest++ == 0) {
@@ -3461,7 +3468,7 @@ ruby_brace_expand(const char *str, int flags, ruby_glob_func *func, VALUE arg,
             }
             memcpy(buf+shift, t, p-t);
             strlcpy(buf+shift+(p-t), rbrace+1, len-(shift+(p-t)));
-            status = ruby_brace_expand(buf, flags, func, arg, enc, var);
+            status = brace_expand_limited(buf, flags, func, arg, enc, var, budget);
             if (status) break;
         }
         GLOB_FREE(buf);
@@ -3472,6 +3479,14 @@ ruby_brace_expand(const char *str, int flags, ruby_glob_func *func, VALUE arg,
 
     RB_GC_GUARD(var);
     return status;
+}
+
+static int
+ruby_brace_expand(const char *str, int flags, ruby_glob_func *func, VALUE arg,
+                  rb_encoding *enc, VALUE var)
+{
+    size_t budget = BRACE_EXPAND_LIMIT;
+    return brace_expand_limited(str, flags, func, arg, enc, var, &budget);
 }
 
 struct brace_args {

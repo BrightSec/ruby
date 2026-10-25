@@ -175,6 +175,7 @@ resize_buffer(VALUE ftime, char *s, const char **start, const char **endp,
 	size_t nlen = rb_str_capacity(ftime);
 
 	if (nlen > maxsize) return 0;
+	if (nlen == 0) nlen = 1; /* doubling zero would never reach need */
 	while (nlen < need) {
 		nlen <<= 1;
 		if (nlen < len || nlen > maxsize) {
@@ -205,6 +206,7 @@ buffer_size_check(const char *s,
 static char *
 case_conv(char *s, ptrdiff_t i, int flags)
 {
+	if (i <= 0) return s;
 	switch (flags & (BIT_OF(UPPER)|BIT_OF(LOWER))) {
 	case BIT_OF(UPPER):
 		do {
@@ -920,9 +922,11 @@ err:
 static size_t
 strftime_size_limit(size_t format_len)
 {
+	const size_t max_limit = 16*1024*1024;
 	size_t limit = format_len * (1*1024*1024);
 	if (limit < format_len) limit = format_len;
 	else if (limit < 1024) limit = 1024;
+	if (limit > max_limit) limit = max_limit;
 	return limit;
 }
 
