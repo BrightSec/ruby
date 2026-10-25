@@ -206,6 +206,7 @@ buffer_size_check(const char *s,
 static char *
 case_conv(char *s, ptrdiff_t i, int flags)
 {
+	if (i <= 0) return s;
 	switch (flags & (BIT_OF(UPPER)|BIT_OF(LOWER))) {
 	case BIT_OF(UPPER):
 		do {
