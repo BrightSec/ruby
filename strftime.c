@@ -920,9 +920,11 @@ err:
 static size_t
 strftime_size_limit(size_t format_len)
 {
+	const size_t max_limit = 16*1024*1024;
 	size_t limit = format_len * (1*1024*1024);
 	if (limit < format_len) limit = format_len;
 	else if (limit < 1024) limit = 1024;
+	if (limit > max_limit) limit = max_limit;
 	return limit;
 }
 
