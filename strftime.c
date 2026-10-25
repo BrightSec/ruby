@@ -175,6 +175,7 @@ resize_buffer(VALUE ftime, char *s, const char **start, const char **endp,
 	size_t nlen = rb_str_capacity(ftime);
 
 	if (nlen > maxsize) return 0;
+	if (nlen == 0) nlen = 1; /* doubling zero would never reach need */
 	while (nlen < need) {
 		nlen <<= 1;
 		if (nlen < len || nlen > maxsize) {
